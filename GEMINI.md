@@ -44,17 +44,17 @@ The app requires a Gemini API key to function. It checks for the key in the foll
 
 ### Directory Structure
 *   `App/`: Contains the main app entry point (`SongTranscriberApp.swift`) and SwiftData container setup.
-*   `Models/`: SwiftData models. `Song.swift` is the core entity.
+*   `Models/`: SwiftData models. `Song.swift` is the core entity, including fields for lyrics and English translations.
 *   `Services/`: Handles external interactions and hardware access.
     *   `AudioRecordingService.swift`: Manages `AVAudioRecorder` and `AVAudioPlayer` for recording and playback.
-    *   `GeminiAPIService.swift`: Handles file uploads and content generation requests to the Gemini API.
+    *   `GeminiAPIService.swift`: Handles file uploads and content generation requests to the Gemini API, including requests for English translation.
 *   `ViewModels/`: Manages state and business logic for views.
-    *   `RecordingViewModel.swift`: Orchestrates the recording-to-transcription flow.
+    *   `RecordingViewModel.swift`: Orchestrates the recording-to-transcription flow and handles language selection.
 *   `Views/`: SwiftUI views.
     *   `ContentView.swift`: Main tab container.
     *   `RecordingView.swift`: Recording interface.
     *   `JournalListView.swift`: List of saved songs.
-    *   `SongDetailView.swift`: Detailed view for editing and reviewing songs.
+    *   `SongDetailView.swift`: Detailed view for editing and reviewing songs, including translation display.
 
 ### Key Conventions
 
@@ -64,10 +64,14 @@ The app requires a Gemini API key to function. It checks for the key in the foll
 *   **Audio Storage:** Audio files (`.m4a`) are stored in the app's Documents directory, linked to `Song` entities via filenames. They are manually managed (deleted when the Song is deleted).
 *   **API Integration:** The `GeminiAPIService` performs a two-step process:
     1.  Resumable upload of the audio file to the Google Cloud.
-    2.  Generation request to `gemini-3-flash-preview` with the file URI and a specific prompt for JSON output.
+    2.  Generation request to `gemini-3-flash-preview` with the file URI and a specific prompt for JSON output, which includes fields for title, lyrics, and English translation if applicable.
 
 ## Development Notes
 
+*   **English Translation:** The app automatically requests an English translation from the Gemini API if the song is not in English. This is displayed in the song detail view.
 *   **Microphone Access:** The app requires microphone permission (`NSMicrophoneUsageDescription` in `Info.plist`).
 *   **Testing:** The project uses the Swift Testing framework (`@Test` macro) rather than XCTest for unit tests.
 *   **UI State:** `RecordingViewModel` uses a state machine (idle, recording, transcribing, etc.) to drive the `RecordingView` UI.
+
+## Gemini Added Memories
+- The SongTranscriber project structure has been reorganized into App, Models, Services, ViewModels, and Views directories. The main entry point is now SongTranscriber/App/SongTranscriberApp.swift.
