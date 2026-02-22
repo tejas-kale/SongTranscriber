@@ -1,48 +1,48 @@
 # SongTranscriber
 
-SongTranscriber is an iOS application designed to record songs and transcribe their lyrics using Google's Gemini API. It features a searchable journal for storing song ideas, powered by SwiftData for local persistence.
+SongTranscriber records songs and transcribes their lyrics using Google's Gemini AI. It is a **Progressive Web App (PWA)** that can be installed on iPhone directly from Safari — no App Store required.
 
 ## Features
 
-- **Audio Recording**: Record song ideas with a simple, state-driven interface.
+- **Audio Recording**: Record song ideas directly in the browser.
 - **AI Transcription**: Automatically transcribe lyrics and generate song titles using the Gemini API.
 - **English Translation**: Automatically provides English translations for songs recorded in other languages.
-- **Searchable Journal**: Store and organize your songs with titles, lyrics, tags, and notes.
-- **Local Persistence**: Powered by SwiftData for efficient and reliable local storage.
-- **Audio Playback**: Listen back to your recordings directly within the app.
+- **Searchable Journal**: Store and organize songs with titles, lyrics, tags, and notes.
+- **Local Persistence**: All data (API key, transcripts) stored locally in `localStorage` — nothing sent to any server other than the Gemini API.
+- **Audio Playback**: Listen back to your recordings before transcribing.
 
-## Project Structure
+## Quick Start
 
-- `App/`: Main entry point and SwiftData setup.
-- `Models/`: SwiftData models (e.g., `Song`).
-- `Services/`: Hardware access (audio) and API integration (Gemini).
-- `ViewModels/`: Business logic and state management.
-- `Views/`: SwiftUI user interface.
+### Install on iPhone
 
-## Prerequisites
+1. Host the `web/` directory from any static web host (GitHub Pages, Netlify, etc.), or open `web/index.html` in a browser.
+2. On iPhone: open the URL in **Safari**, tap the **Share** button, then **Add to Home Screen**.
+3. Enter your Gemini API key in the **Settings** tab (stored in `localStorage` — never leaves your device).
 
-- Xcode 15+ (iOS 17.0+ SDK)
-- Google Gemini API Key
+### Prerequisites
+- iPhone with iOS 14.3+ (Safari supports `MediaRecorder` from iOS 14.3)
+- A [Google Gemini API key](https://aistudio.google.com)
 
-## Setup
+## Project Structure (`web/`)
 
-1. Clone the repository.
-2. Open `SongTranscriber.xcodeproj` in Xcode.
-3. Obtain a Gemini API key from [Google AI Studio](https://aistudio.google.com).
-4. Enter your API key in the app's **Settings** tab, or set it as an environment variable `GEMINI_API_KEY`.
+| File | Purpose |
+|------|---------|
+| `index.html` | Complete single-file PWA (HTML + CSS + JavaScript) |
+| `manifest.json` | PWA manifest for "Add to Home Screen" |
+| `sw.js` | Service worker — caches app shell for offline use |
+| `icon.png` | App icon |
 
-## Development
+## Data Persistence
 
-### Building
-```bash
-xcodebuild -scheme SongTranscriber -configuration Debug build
-```
+All data is stored locally on the device:
 
-### Testing
-```bash
-xcodebuild test -scheme SongTranscriber
-```
+| Key | Value |
+|-----|-------|
+| `geminiAPIKey` | Your Gemini API key |
+| `songs` | JSON array of all transcribed songs |
+| `defaultLanguage` | Selected recording language |
 
 ## License
 
 This project is licensed under the MIT License.
+

@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SongTranscriber">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <title>SongTranscriber</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { margin: 0; padding: 0; }
+
+    :root {
+      --red: #e53935;
+      --blue: #007aff;
+      --green: #34c759;
+      --orange: #ff9500;
+      --gray: #8e8e93;
+      --light-gray: #f2f2f7;
+      --mid-gray: #e5e5ea;
+      --bg: #f2f2f7;
+      --surface: #ffffff;
+      --text: #000000;
+      --text2: #6d6d72;
+      --border: #c8c7cc;
+      --header-h: 54px;
+      --tab-h: 56px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100%;
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* ── Header ── */
+    #header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: calc(var(--header-h) + var(--safe-top));
+      padding-top: var(--safe-top);
+      background: rgba(255,255,255,0.9);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border-bottom: 0.5px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding-bottom: 8px;
+      padding-left: 16px;
+      padding-right: 16px;
+      z-index: 100;
+    }
+    #back-btn {
+      font-size: 17px; color: var(--blue);
+      background: none; border: none; cursor: pointer;
+      padding: 4px 0; min-width: 60px;
+      display: flex; align-items: center; gap: 2px;
+    }
+    #page-title {
+      font-size: 17px; font-weight: 600;
+      text-align: center; flex: 1;
+    }
+    #header-actions {
+      min-width: 60px; display: flex;
+      justify-content: flex-end; align-items: center; gap: 12px;
+    }
+    .hdr-btn {
+      background: none; border: none; color: var(--blue);
+      font-size: 16px; cursor: pointer; padding: 4px;
+    }
+
+    /* ── Content ── */
+    #content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-top: calc(var(--header-h) + var(--safe-top));
+      padding-bottom: calc(var(--tab-h) + var(--safe-bottom) + 16px);
+    }
+
+    /* ── Tab Bar ── */
+    #tab-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: calc(var(--tab-h) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: rgba(255,255,255,0.9);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      padding-top: 6px;
+      z-index: 100;
+    }
+    .tab-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+      background: none; border: none; cursor: pointer;
+      padding: 4px 0; color: var(--gray);
+      font-size: 10px; font-weight: 500;
+    }
+    .tab-btn.active { color: var(--blue); }
+    .tab-icon { font-size: 22px; line-height: 1; }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%; padding: 16px;
+      border-radius: 14px; border: none;
+      font-size: 17px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity 0.1s;
+    }
+    .btn:active { opacity: 0.7; }
+    .btn-red    { background: var(--red);    color: white; }
+    .btn-blue   { background: var(--blue);   color: white; }
+    .btn-green  { background: var(--green);  color: white; }
+    .btn-orange { background: var(--orange); color: white; }
+    .btn-gray   { background: var(--gray);   color: white; }
+
+    /* ── Record View ── */
+    .record-view {
+      display: flex; flex-direction: column;
+      align-items: center; padding: 16px 16px 8px;
+      min-height: calc(100dvh - var(--header-h) - var(--tab-h) - var(--safe-top) - var(--safe-bottom) - 32px);
+    }
+    .rec-status {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px; width: 100%; padding: 16px 0;
+    }
+    .rec-icon   { font-size: 80px; line-height: 1; }
+    .rec-title  { font-size: 20px; font-weight: 600; }
+    .rec-subtitle {
+      font-size: 15px; color: var(--text2);
+      text-align: center; padding: 0 32px;
+    }
+    .rec-timer {
+      font-size: 52px; font-weight: 300;
+      font-variant-numeric: tabular-nums; letter-spacing: -1px;
+    }
+    .rec-buttons {
+      width: 100%; display: flex;
+      flex-direction: column; gap: 12px; padding-bottom: 8px;
+    }
+    .lang-picker {
+      width: 100%; background: var(--surface);
+      border-radius: 12px; padding: 12px 16px;
+      font-size: 16px; color: var(--text);
+      border: 1px solid var(--border);
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238e8e93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 16px center;
+      padding-right: 36px;
+    }
+
+    /* Waveform */
+    .waveform { display: flex; align-items: center; gap: 5px; height: 60px; }
+    .wave-bar {
+      width: 5px; border-radius: 3px; background: var(--red);
+      animation: wave 0.9s ease-in-out infinite;
+    }
+    .wave-bar:nth-child(1) { height: 20px; animation-delay: 0.0s; }
+    .wave-bar:nth-child(2) { height: 36px; animation-delay: 0.1s; }
+    .wave-bar:nth-child(3) { height: 52px; animation-delay: 0.2s; }
+    .wave-bar:nth-child(4) { height: 40px; animation-delay: 0.3s; }
+    .wave-bar:nth-child(5) { height: 56px; animation-delay: 0.4s; }
+    .wave-bar:nth-child(6) { height: 30px; animation-delay: 0.5s; }
+    .wave-bar:nth-child(7) { height: 44px; animation-delay: 0.6s; }
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.3); }
+      50%       { transform: scaleY(1);   }
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--mid-gray);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Journal View ── */
+    .search-bar { padding: 10px 16px; }
+    .search-input {
+      width: 100%; padding: 10px 16px 10px 36px;
+      border-radius: 10px; border: none;
+      background: var(--mid-gray); font-size: 16px;
+      color: var(--text); outline: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Ccircle cx='6' cy='6' r='4.5' stroke='%238e8e93' stroke-width='1.5' fill='none'/%3E%3Cline x1='9.5' y1='9.5' x2='13' y2='13' stroke='%238e8e93' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: 12px center;
+    }
+    .song-list { padding: 0 0 8px; }
+    .song-row {
+      background: var(--surface); margin: 0 16px 10px;
+      border-radius: 12px; padding: 14px 16px; cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: opacity 0.1s;
+    }
+    .song-row:active { opacity: 0.7; }
+    .song-row-top {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 8px; margin-bottom: 4px;
+    }
+    .song-title-text {
+      font-size: 16px; font-weight: 600;
+      flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .lang-badge {
+      font-size: 12px; padding: 3px 8px;
+      background: rgba(0,122,255,0.12); color: var(--blue);
+      border-radius: 8px; white-space: nowrap; flex-shrink: 0;
+    }
+    .song-row-preview {
+      font-size: 14px; color: var(--text2); margin-bottom: 6px;
+      display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .song-row-footer { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; justify-content: flex-end; }
+    .tag-chip {
+      font-size: 12px; color: var(--blue);
+      background: rgba(0,122,255,0.1); padding: 2px 8px; border-radius: 10px;
+    }
+    .empty-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; padding: 60px 32px;
+      text-align: center; color: var(--text2);
+    }
+    .empty-icon  { font-size: 60px; }
+    .empty-title { font-size: 20px; font-weight: 600; color: var(--text); }
+
+    /* ── Song Detail ── */
+    .detail-view { padding: 8px 0 16px; }
+    .detail-section {
+      background: var(--surface); margin: 0 16px 10px;
+      border-radius: 12px; padding: 16px;
+    }
+    .detail-title { font-size: 22px; font-weight: 700; line-height: 1.3; }
+    .detail-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .detail-date  { font-size: 14px; color: var(--text2); }
+    .section-hdr  {
+      font-size: 13px; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+    }
+    .detail-text  { font-size: 16px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+    .translation-section {
+      background: rgba(0,122,255,0.06); margin: 0 16px 10px;
+      border-radius: 12px; padding: 16px;
+    }
+    .tags-flow { display: flex; flex-wrap: wrap; gap: 8px; }
+    .danger-btn {
+      display: block; width: calc(100% - 32px);
+      margin: 8px 16px 0; padding: 16px;
+      border-radius: 14px; border: none;
+      font-size: 17px; font-weight: 600; cursor: pointer;
+      background: rgba(255,59,48,0.1); color: #ff3b30;
+    }
+    .danger-btn:active { opacity: 0.7; }
+
+    /* ── Edit Song ── */
+    .edit-view { padding: 8px 0 16px; }
+    .form-section { margin: 0 16px 10px; background: var(--surface); border-radius: 12px; overflow: hidden; }
+    .form-label {
+      font-size: 13px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text2); padding: 12px 16px 4px;
+    }
+    .form-input {
+      width: 100%; padding: 12px 16px;
+      font-size: 16px; color: var(--text);
+      background: transparent; border: none; outline: none;
+      border-top: 0.5px solid var(--border);
+      resize: vertical; font-family: inherit; min-height: 44px;
+    }
+    .tag-input-row {
+      display: flex; align-items: center;
+      padding: 8px 16px; gap: 8px;
+      border-top: 0.5px solid var(--border);
+    }
+    .tag-input {
+      flex: 1; padding: 8px 4px; font-size: 16px;
+      background: transparent; border: none; outline: none; font-family: inherit;
+    }
+    .add-tag-btn {
+      background: none; border: none; color: var(--blue);
+      font-size: 26px; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    .tags-edit-wrap { padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag-del-chip {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 14px; color: var(--blue);
+      background: rgba(0,122,255,0.12); padding: 5px 10px; border-radius: 12px;
+    }
+    .tag-x {
+      background: none; border: none; color: var(--gray);
+      cursor: pointer; font-size: 15px; line-height: 1; padding: 0 0 0 2px;
+    }
+
+    /* ── Settings ── */
+    .settings-view { padding: 16px 0 8px; }
+    .settings-group { margin: 0 16px 24px; }
+    .settings-hdr {
+      font-size: 13px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text2); padding: 0 4px 8px;
+    }
+    .settings-card {
+      background: var(--surface); border-radius: 12px;
+      overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .settings-row {
+      padding: 13px 16px; border-bottom: 0.5px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-label { font-size: 16px; color: var(--text); }
+    .settings-value { font-size: 16px; color: var(--text2); }
+    .settings-input {
+      flex: 1; font-size: 16px; border: none; outline: none;
+      background: transparent; font-family: inherit;
+      text-align: right; color: var(--text); min-width: 0;
+    }
+    .settings-select {
+      font-size: 16px; border: none; outline: none;
+      background: transparent; color: var(--blue); font-family: inherit;
+      -webkit-appearance: none; cursor: pointer;
+    }
+    .settings-btn {
+      background: none; border: none; color: var(--blue);
+      font-size: 16px; cursor: pointer; padding: 0;
+    }
+    .settings-footer { font-size: 13px; color: var(--text2); padding: 6px 4px 0; line-height: 1.4; }
+    .settings-footer a { color: var(--blue); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200; display: flex; align-items: flex-end;
+    }
+    .modal-sheet {
+      background: var(--surface); border-radius: 20px 20px 0 0;
+      padding: 24px 20px calc(20px + var(--safe-bottom));
+      width: 100%;
+    }
+    .modal-title   { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .modal-message { font-size: 15px; color: var(--text2); margin-bottom: 24px; line-height: 1.4; }
+    .modal-buttons { display: flex; flex-direction: column; gap: 12px; }
+    .modal-btn { width: 100%; padding: 16px; border-radius: 14px; border: none; font-size: 17px; font-weight: 600; cursor: pointer; }
+    .modal-btn.danger { background: rgba(255,59,48,0.1); color: #ff3b30; }
+    .modal-btn.cancel { background: var(--light-gray); color: var(--blue); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      top: calc(var(--header-h) + var(--safe-top) + 14px);
+      left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.8); color: white;
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 14px; z-index: 300; white-space: nowrap;
+      animation: fadeToast 2.5s ease forwards;
+      pointer-events: none;
+    }
+    @keyframes fadeToast {
+      0%   { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+      15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+      70%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <button id="back-btn" onclick="goBack()" style="visibility:hidden">&#8249; Back</button>
+      <h1 id="page-title">SongTranscriber</h1>
+      <div id="header-actions"></div>
+    </header>
+
+    <main id="content"></main>
+
+    <nav id="tab-bar">
+      <button class="tab-btn active" data-tab="record" onclick="switchTab('record')">
+        <span class="tab-icon">🎙️</span><span>Record</span>
+      </button>
+      <button class="tab-btn" data-tab="journal" onclick="switchTab('journal')">
+        <span class="tab-icon">📝</span><span>Journal</span>
+      </button>
+      <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">
+        <span class="tab-icon">⚙️</span><span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <div id="modal" style="display:none"></div>
+
+  <script>
+  'use strict';
+
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const LANGUAGES = [
+    'English','Spanish','French','German','Italian',
+    'Portuguese','Japanese','Korean','Chinese','Hindi','Arabic'
+  ];
+  const GEMINI_UPLOAD = 'https://generativelanguage.googleapis.com/upload/v1beta/files';
+  const GEMINI_GEN    = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const S = {
+    tab:        'record',
+    subView:    null,         // null | 'detail' | 'edit'
+    songId:     null,
+
+    // Recording state machine
+    recState:   'idle',       // idle | recording | recorded | transcribing | transcribed | error
+    recBlob:    null,
+    recMime:    '',
+    recSecs:    0,
+    recTimer:   null,
+    recorder:   null,
+    stream:     null,
+    chunks:     [],
+    playAudio:  null,
+    playing:    false,
+    doneId:     null,         // id of just-transcribed song
+    errMsg:     '',
+
+    // Data
+    songs:      [],
+
+    // Settings
+    apiKey:     '',
+    defLang:    'English',
+    showKey:    false,
+
+    // UI
+    search:     '',
+    editTags:   [],
+    newTag:     '',
+    editDraft:  { title: null, notes: null, lyrics: null },
+  };
+
+  // ── Storage ───────────────────────────────────────────────────────────────
+  function loadStorage() {
+    S.songs  = JSON.parse(localStorage.getItem('songs')           || '[]');
+    S.apiKey = localStorage.getItem('geminiAPIKey')               || '';
+    S.defLang= localStorage.getItem('defaultLanguage')            || 'English';
+  }
+  function saveSongs() { localStorage.setItem('songs', JSON.stringify(S.songs)); }
+
+  // ── Utilities ─────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function uid() {
+    return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          const r = Math.random()*16|0;
+          return (c==='x'?r:r&0x3|0x8).toString(16);
+        });
+  }
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+      +' '+new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  }
+  function fmtTime(s) {
+    return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+  }
+  function toast(msg) {
+    const el = document.createElement('div');
+    el.className = 'toast'; el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 2800);
+  }
+  function bestMime() {
+    for (const t of ['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg']) {
+      if (typeof MediaRecorder!=='undefined' && MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return '';
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    S.tab=tab; S.subView=null; S.songId=null;
+    S.editDraft={title:null,notes:null,lyrics:null};
+    render();
+  }
+  function showDetail(id) { S.subView='detail'; S.songId=id; render(); }
+  function showEdit(id) {
+    const song=S.songs.find(s=>s.id===id); if(!song) return;
+    S.subView='edit'; S.songId=id;
+    S.editTags=[...(song.tags||[])]; S.newTag='';
+    S.editDraft={title:null,notes:null,lyrics:null};
+    render();
+  }
+  function goBack() {
+    if (S.subView==='edit') {
+      // Discard unsaved text edits
+      S.editDraft={title:null,notes:null,lyrics:null};
+      S.subView='detail';
+    } else {
+      S.subView=null; S.songId=null;
+    }
+    render();
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function render() { renderHeader(); renderContent(); renderTabBar(); }
+
+  function renderTabBar() {
+    const bar = document.getElementById('tab-bar');
+    bar.style.display = S.subView ? 'none' : 'flex';
+    document.querySelectorAll('.tab-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tab===S.tab));
+  }
+
+  function renderHeader() {
+    const back    = document.getElementById('back-btn');
+    const title   = document.getElementById('page-title');
+    const actions = document.getElementById('header-actions');
+    back.style.visibility = S.subView ? 'visible' : 'hidden';
+
+    if (S.subView==='detail') {
+      title.textContent = 'Song Details';
+      actions.innerHTML = `
+        <button class="hdr-btn" title="Edit" onclick="showEdit('${esc(S.songId)}')">&#9998;</button>
+        <button class="hdr-btn" title="Share" onclick="shareSong('${esc(S.songId)}')">&#8679;</button>`;
+    } else if (S.subView==='edit') {
+      title.textContent = 'Edit Song';
+      actions.innerHTML = `<button class="hdr-btn" style="font-weight:700" onclick="saveEdit()">Done</button>`;
+    } else {
+      title.textContent = {record:'SongTranscriber',journal:'Songs',settings:'Settings'}[S.tab]||'';
+      actions.innerHTML = '';
+    }
+  }
+
+  function renderContent() {
+    const el = document.getElementById('content');
+    if      (S.subView==='detail') el.innerHTML = viewDetail(S.songId);
+    else if (S.subView==='edit')   el.innerHTML = viewEdit(S.songId);
+    else if (S.tab==='record')     el.innerHTML = viewRecord();
+    else if (S.tab==='journal')    el.innerHTML = viewJournal();
+    else if (S.tab==='settings')   el.innerHTML = viewSettings();
+  }
+
+  // ── Record View ────────────────────────────────────────────────────────────
+  function viewRecord() {
+    const rs = S.recState;
+    let status='', buttons='';
+
+    if (rs==='idle') {
+      status=`<div class="rec-status">
+        <div class="rec-icon">🎙️</div>
+        <div class="rec-subtitle">Select a language and tap Record to begin</div>
+        <select class="lang-picker" id="lang-sel"
+          onchange="S.defLang=this.value;localStorage.setItem('defaultLanguage',this.value)">
+          ${LANGUAGES.map(l=>`<option value="${esc(l)}"${l===S.defLang?' selected':''}>${esc(l)}</option>`).join('')}
+        </select>
+      </div>`;
+      buttons=`<button class="btn btn-red" onclick="doRecord()">🎙️&nbsp; Start Recording</button>`;
+
+    } else if (rs==='recording') {
+      status=`<div class="rec-status">
+        <div class="waveform">
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+        <div class="rec-title" style="color:var(--red)">Recording…</div>
+        <div class="rec-timer" id="rec-timer">${fmtTime(S.recSecs)}</div>
+      </div>`;
+      buttons=`<button class="btn btn-gray" onclick="doStop()">⬛&nbsp; Stop Recording</button>`;
+
+    } else if (rs==='recorded') {
+      status=`<div class="rec-status">
+        <div class="rec-icon">✅</div>
+        <div class="rec-title">Recording Complete</div>
+        <div class="rec-subtitle">${fmtTime(S.recSecs)}</div>
+      </div>`;
+      buttons=`
+        <button class="btn btn-blue" id="play-btn" onclick="doPlay()">
+          ${S.playing?'⬛&nbsp; Stop Playback':'▶️&nbsp; Play Recording'}
+        </button>
+        <button class="btn btn-gray"  onclick="doDiscard()">🗑️&nbsp; Discard</button>
+        <button class="btn btn-green" onclick="doTranscribe()">✨&nbsp; Transcribe Song</button>`;
+
+    } else if (rs==='transcribing') {
+      status=`<div class="rec-status">
+        <div class="spinner"></div>
+        <div class="rec-title">Transcribing…</div>
+        <div class="rec-subtitle">Uploading to Gemini AI</div>
+      </div>`;
+
+    } else if (rs==='transcribed') {
+      const song=S.songs.find(s=>s.id===S.doneId);
+      status=`<div class="rec-status">
+        <div class="rec-icon">🎵</div>
+        <div class="rec-title">Transcription Complete!</div>
+        <div class="rec-subtitle">${song?esc(song.title):''}</div>
+      </div>`;
+      buttons=`
+        ${song?`<button class="btn btn-blue" onclick="switchTab('journal');showDetail('${esc(song.id)}')">📄&nbsp; View Transcription</button>`:''}
+        <button class="btn btn-green" onclick="doReset()">➕&nbsp; Record Another Song</button>`;
+
+    } else if (rs==='error') {
+      status=`<div class="rec-status">
+        <div class="rec-icon">⚠️</div>
+        <div class="rec-title">Error</div>
+        <div class="rec-subtitle">${esc(S.errMsg)}</div>
+      </div>`;
+      buttons=`
+        <button class="btn btn-orange" onclick="doTranscribe()">🔄&nbsp; Retry Transcription</button>
+        <button class="btn btn-gray"   onclick="doReset()">↺&nbsp; Start Over</button>`;
+    }
+
+    return `<div class="record-view">${status}<div class="rec-buttons">${buttons}</div></div>`;
+  }
+
+  // ── Journal View ──────────────────────────────────────────────────────────
+  function viewJournal() {
+    const q = S.search.toLowerCase();
+    let list = [...S.songs].sort((a,b)=>new Date(b.recordingDate)-new Date(a.recordingDate));
+    if (q) list=list.filter(s=>
+      s.title.toLowerCase().includes(q)||
+      s.lyrics.toLowerCase().includes(q)||
+      (s.notes||'').toLowerCase().includes(q)||
+      (s.tags||[]).some(t=>t.toLowerCase().includes(q)));
+
+    const rows = list.length===0
+      ? `<div class="empty-state">
+           <div class="empty-icon">${q?'🔍':'🎵'}</div>
+           <div class="empty-title">${q?'No Results':'No Songs Yet'}</div>
+           <div>${q?'Try a different search term':'Record your first song to get started'}</div>
+         </div>`
+      : `<div class="song-list">${list.map(songRow).join('')}</div>`;
+
+    return `<div>
+      <div class="search-bar">
+        <input class="search-input" type="search" placeholder="Search songs…"
+          value="${esc(S.search)}"
+          oninput="S.search=this.value;renderContent()"
+          onsearch="S.search=this.value;renderContent()">
+      </div>${rows}</div>`;
+  }
+
+  function songRow(s) {
+    const preview=s.lyrics?s.lyrics.slice(0,100)+(s.lyrics.length>100?'…':''):'';
+    const tags=(s.tags||[]).slice(0,3);
+    const more=(s.tags||[]).length>3?`<span class="tag-chip">+${(s.tags||[]).length-3}</span>`:'';
+    return `<div class="song-row" onclick="showDetail('${esc(s.id)}')">
+      <div class="song-row-top">
+        <span class="song-title-text">${esc(s.title)}</span>
+        <span class="lang-badge">${esc(s.language)}</span>
+      </div>
+      ${preview?`<div class="song-row-preview">${esc(preview)}</div>`:''}
+      <div class="song-row-footer">
+        <span>${esc(fmtDate(s.recordingDate))}</span>
+        ${tags.length?`<div class="tag-list">${tags.map(t=>`<span class="tag-chip">#${esc(t)}</span>`).join('')}${more}</div>`:''}
+      </div>
+    </div>`;
+  }
+
+  // ── Song Detail View ───────────────────────────────────────────────────────
+  function viewDetail(id) {
+    const s=S.songs.find(x=>x.id===id);
+    if(!s) return '<div class="empty-state"><div>Song not found</div></div>';
+
+    const tags=(s.tags&&s.tags.length)?
+      `<div class="detail-section">
+         <div class="section-hdr">Tags</div>
+         <div class="tags-flow">${s.tags.map(t=>`<span class="tag-chip">#${esc(t)}</span>`).join('')}</div>
+       </div>`:'';
+
+    const notes=s.notes?
+      `<div class="detail-section">
+         <div class="section-hdr">Notes</div>
+         <div class="detail-text" style="color:var(--text2)">${esc(s.notes)}</div>
+       </div>`:'';
+
+    const xlat=(s.translation&&s.translation.trim())?
+      `<div class="translation-section">
+         <div class="section-hdr" style="color:var(--blue)">English Translation</div>
+         <div class="detail-text">${esc(s.translation)}</div>
+       </div>`:'';
+
+    return `<div class="detail-view">
+      <div class="detail-section"><div class="detail-title">${esc(s.title)}</div></div>
+      <div class="detail-section">
+        <div class="detail-meta">
+          <span class="lang-badge">${esc(s.language)}</span>
+          <span class="detail-date">${esc(fmtDate(s.recordingDate))}</span>
+        </div>
+      </div>
+      ${tags}${notes}
+      <div class="detail-section">
+        <div class="section-hdr">Lyrics</div>
+        <div class="detail-text">${esc(s.lyrics)}</div>
+      </div>
+      ${xlat}
+      <button class="danger-btn" onclick="confirmDelete('${esc(id)}')">Delete Song</button>
+    </div>`;
+  }
+
+  // ── Edit Song View ─────────────────────────────────────────────────────────
+  function viewEdit(id) {
+    const s=S.songs.find(x=>x.id===id); if(!s) return '';
+    const title  = S.editDraft.title  !== null ? S.editDraft.title  : s.title;
+    const notes  = S.editDraft.notes  !== null ? S.editDraft.notes  : (s.notes||'');
+    const lyrics = S.editDraft.lyrics !== null ? S.editDraft.lyrics : (s.lyrics||'');
+
+    const chips=S.editTags.map(t=>
+      `<span class="tag-del-chip"><span>#${esc(t)}</span>
+       <button class="tag-x" onclick="rmTag('${esc(t)}')">&#10005;</button></span>`).join('');
+
+    return `<div class="edit-view">
+      <div class="form-section">
+        <div class="form-label">Title</div>
+        <input id="et-title" class="form-input" type="text" value="${esc(title)}"
+          placeholder="Song title" autocorrect="off" style="border-top:none">
+      </div>
+      <div class="form-section">
+        <div class="form-label">Tags</div>
+        ${S.editTags.length?`<div class="tags-edit-wrap">${chips}</div>`:''}
+        <div class="tag-input-row">
+          <input id="et-tag" class="tag-input" type="text" placeholder="Add tag…"
+            value="${esc(S.newTag)}"
+            oninput="S.newTag=this.value"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addTag()}">
+          <button class="add-tag-btn" onclick="addTag()">&#xFF0B;</button>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-label">Notes</div>
+        <textarea id="et-notes" class="form-input" rows="4"
+          placeholder="Add notes…">${esc(notes)}</textarea>
+      </div>
+      <div class="form-section">
+        <div class="form-label">Lyrics</div>
+        <textarea id="et-lyrics" class="form-input" rows="10"
+          placeholder="Lyrics…">${esc(lyrics)}</textarea>
+      </div>
+    </div>`;
+  }
+
+  function syncDraft() {
+    const t=document.getElementById('et-title');
+    const n=document.getElementById('et-notes');
+    const l=document.getElementById('et-lyrics');
+    if(t) S.editDraft.title  = t.value;
+    if(n) S.editDraft.notes  = n.value;
+    if(l) S.editDraft.lyrics = l.value;
+  }
+  function addTag() {
+    syncDraft();
+    const tag=(document.getElementById('et-tag')?.value||S.newTag).trim();
+    if(tag&&!S.editTags.includes(tag)){S.editTags.push(tag);}
+    S.newTag=''; render();
+  }
+  function rmTag(tag) { syncDraft(); S.editTags=S.editTags.filter(t=>t!==tag); render(); }
+  function saveEdit() {
+    const s=S.songs.find(x=>x.id===S.songId); if(!s) return;
+    const t=document.getElementById('et-title');
+    const n=document.getElementById('et-notes');
+    const l=document.getElementById('et-lyrics');
+    if(t) s.title  = t.value.trim()||'Untitled Song';
+    if(n) s.notes  = n.value;
+    if(l) s.lyrics = l.value;
+    s.tags=[...S.editTags];
+    saveSongs();
+    S.editDraft={title:null,notes:null,lyrics:null};
+    S.subView='detail'; toast('Saved'); render();
+  }
+
+  // ── Settings View ──────────────────────────────────────────────────────────
+  function viewSettings() {
+    const masked = S.apiKey ? '••••••'+S.apiKey.slice(-4) : '';
+    return `<div class="settings-view">
+      <div class="settings-group">
+        <div class="settings-hdr">Gemini API Key</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <span class="settings-label">API Key</span>
+            ${S.showKey
+              ? `<input class="settings-input" id="api-key-inp" type="text"
+                   value="${esc(S.apiKey)}" placeholder="Paste your key…"
+                   autocorrect="off" autocapitalize="none" spellcheck="false"
+                   oninput="S.apiKey=this.value;localStorage.setItem('geminiAPIKey',this.value)">`
+              : `<span class="settings-value">${S.apiKey?esc(masked):'Not set'}</span>`}
+          </div>
+          <div class="settings-row">
+            <button class="settings-btn" onclick="toggleKey()">
+              ${S.showKey?'Hide':(S.apiKey?'Change':'Set API Key')}
+            </button>
+          </div>
+        </div>
+        <div class="settings-footer">
+          Get your free key from <a href="https://aistudio.google.com" target="_blank">Google AI Studio</a>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-hdr">Recording Settings</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <span class="settings-label">Default Language</span>
+            <select class="settings-select"
+              onchange="S.defLang=this.value;localStorage.setItem('defaultLanguage',this.value)">
+              ${LANGUAGES.map(l=>`<option value="${esc(l)}"${l===S.defLang?' selected':''}>${esc(l)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="settings-footer">Language pre-selected when recording new songs</div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-hdr">About</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <span class="settings-label">Version</span>
+            <span class="settings-value">2.0 (PWA)</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Install</span>
+            <span class="settings-value" style="font-size:13px;text-align:right">Safari → Share → Add to Home Screen</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+  function toggleKey() { S.showKey=!S.showKey; render(); }
+
+  // ── Recording Actions ──────────────────────────────────────────────────────
+  async function doRecord() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      S.errMsg='Microphone not supported in this browser.';
+      S.recState='error'; render(); return;
+    }
+    if (typeof MediaRecorder==='undefined') {
+      S.errMsg='Audio recording is not supported in this browser. Please update Safari or use Chrome.';
+      S.recState='error'; render(); return;
+    }
+    try {
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      S.stream=stream; S.chunks=[]; S.recSecs=0;
+      const mime=bestMime(); S.recMime=mime;
+      let recorder;
+      try {
+        recorder=new MediaRecorder(stream, mime?{mimeType:mime}:{});
+      } catch(mimeErr) {
+        // MIME type not supported; fall back to browser default
+        recorder=new MediaRecorder(stream);
+        S.recMime='';
+      }
+      S.recorder=recorder;
+      S.recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)S.chunks.push(e.data);};
+      S.recorder.onstop=()=>{
+        S.recBlob=new Blob(S.chunks,{type:S.recMime||'audio/mp4'});
+        S.recState='recorded'; render();
+      };
+      S.recorder.start(500);
+      S.recState='recording';
+      S.recTimer=setInterval(()=>{
+        S.recSecs++;
+        const el=document.getElementById('rec-timer');
+        if(el) el.textContent=fmtTime(S.recSecs);
+      },1000);
+      render();
+    } catch(e) {
+      S.errMsg=e.name==='NotAllowedError'||e.name==='PermissionDeniedError'
+        ?'Microphone access denied. Please allow microphone access and try again.'
+        :`Could not access microphone: ${e.message}`;
+      S.recState='error'; render();
+    }
+  }
+
+  function doStop() {
+    clearInterval(S.recTimer); S.recTimer=null;
+    if(S.recorder&&S.recorder.state!=='inactive') S.recorder.stop();
+    S.stream?.getTracks().forEach(t=>t.stop()); S.stream=null;
+  }
+
+  function doPlay() {
+    if(!S.recBlob) return;
+    if(S.playing&&S.playAudio){
+      S.playAudio.pause(); S.playAudio=null; S.playing=false;
+      const btn=document.getElementById('play-btn');
+      if(btn) btn.innerHTML='▶️&nbsp; Play Recording'; return;
+    }
+    const url=URL.createObjectURL(S.recBlob);
+    S.playAudio=new Audio(url);
+    S.playAudio.onended=()=>{
+      S.playing=false; URL.revokeObjectURL(url); S.playAudio=null;
+      const btn=document.getElementById('play-btn');
+      if(btn) btn.innerHTML='▶️&nbsp; Play Recording';
+    };
+    S.playAudio.play().then(()=>{
+      S.playing=true;
+      const btn=document.getElementById('play-btn');
+      if(btn) btn.innerHTML='⬛&nbsp; Stop Playback';
+    }).catch(console.error);
+  }
+
+  function doDiscard() {
+    S.playAudio?.pause(); S.playAudio=null; S.playing=false;
+    S.recBlob=null; S.chunks=[]; S.recState='idle'; render();
+  }
+
+  async function doTranscribe() {
+    if(!S.apiKey){
+      S.errMsg='Gemini API key not set. Please add your key in Settings.';
+      S.recState='error'; render(); return;
+    }
+    if(!S.recBlob){
+      S.errMsg='No recording found. Please record a song first.';
+      S.recState='error'; render(); return;
+    }
+    S.recState='transcribing'; render();
+    try {
+      const uri=await uploadAudio(S.recBlob,S.apiKey,S.recMime||'audio/mp4');
+      const res=await genTranscription(uri,S.defLang,S.apiKey,S.recMime||'audio/mp4');
+      const song={
+        id:uid(), title:res.title||'Untitled Song',
+        lyrics:res.lyrics||'', translation:res.englishTranslation||null,
+        language:S.defLang, tags:[], notes:'', recordingDate:new Date().toISOString()
+      };
+      S.songs.unshift(song); saveSongs();
+      S.doneId=song.id; S.recState='transcribed'; render();
+    } catch(e) {
+      console.error(e);
+      S.errMsg=e.message||'Transcription failed. Please try again.';
+      S.recState='error'; render();
+    }
+  }
+
+  function doReset() {
+    S.playAudio?.pause(); S.playAudio=null;
+    clearInterval(S.recTimer); S.recTimer=null;
+    S.recBlob=null; S.chunks=[]; S.recState='idle';
+    S.recSecs=0; S.playing=false; S.errMsg=''; S.doneId=null; render();
+  }
+
+  // ── Gemini API ────────────────────────────────────────────────────────────
+  function apiErrorMsg(status, serverMsg) {
+    if (status===400) return serverMsg || 'Bad request — check that the audio file is valid.';
+    if (status===401||status===403) return 'Invalid API key. Please check your key in Settings.';
+    if (status===429) return 'API rate limit exceeded. Please wait a moment and try again.';
+    if (status>=500) return 'Gemini API is temporarily unavailable. Please try again later.';
+    return serverMsg || `Request failed (HTTP ${status})`;
+  }
+
+  async function uploadAudio(blob, key, mime) {
+    const base=mime.split(';')[0];
+    const meta=JSON.stringify({file:{display_name:'audio_recording'}});
+    const form=new FormData();
+    form.append('metadata',new Blob([meta],{type:'application/json'}));
+    form.append('data',new Blob([blob],{type:base}),'audio_recording');
+
+    const r=await fetch(`${GEMINI_UPLOAD}?uploadType=multipart&key=${encodeURIComponent(key)}`,
+      {method:'POST',body:form});
+    if(!r.ok){const e=await r.json().catch(()=>({})); throw new Error(apiErrorMsg(r.status, e.error?.message));}
+    const d=await r.json();
+    if(!d.file?.uri) throw new Error('No file URI in upload response');
+    return d.file.uri;
+  }
+
+  async function genTranscription(fileUri, lang, key, mime) {
+    const base=mime.split(';')[0];
+    const prompt=`Transcribe this song recording in ${lang}. Return the result as a JSON object with the following structure:
+{
+  "title": "The song title or 'Untitled Song' if unclear",
+  "lyrics": "The complete song lyrics",
+  "englishTranslation": "The English translation of the lyrics. Only include this field if the song is NOT in English."
+}
+Format the lyrics with one sentence per line.
+Only return the JSON, no additional text.`;
+
+    const body={
+      contents:[{parts:[{text:prompt},{fileData:{mimeType:base,fileUri}}]}],
+      generationConfig:{temperature:0.4,topK:32,topP:1,maxOutputTokens:8192}
+    };
+    const r=await fetch(`${GEMINI_GEN}?key=${encodeURIComponent(key)}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){const e=await r.json().catch(()=>({})); throw new Error(apiErrorMsg(r.status, e.error?.message));}
+    const d=await r.json();
+    const text=d.candidates?.[0]?.content?.parts?.[0]?.text;
+    if(!text) throw new Error('No transcription text in API response');
+    return parseJSON(text);
+  }
+
+  function parseJSON(text) {
+    let s=text.trim();
+    if(s.startsWith('```')){s=s.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();}
+    const obj=JSON.parse(s);
+    if(!obj.title||!obj.lyrics) throw new Error('Transcription response is missing required fields');
+    return obj;
+  }
+
+  // ── Song Actions ──────────────────────────────────────────────────────────
+  function confirmDelete(id) {
+    const s=S.songs.find(x=>x.id===id); if(!s) return;
+    const m=document.getElementById('modal');
+    m.style.display='flex';
+    m.innerHTML=`<div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-title">Delete Song</div>
+        <div class="modal-message">Are you sure you want to delete &ldquo;${esc(s.title)}&rdquo;?<br>This cannot be undone.</div>
+        <div class="modal-buttons">
+          <button class="modal-btn danger" onclick="deleteSong('${esc(id)}')">Delete</button>
+          <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  function closeModal(ev) {
+    if(!ev||ev.target.classList.contains('modal-overlay'))
+      document.getElementById('modal').style.display='none';
+  }
+  function deleteSong(id) {
+    S.songs=S.songs.filter(s=>s.id!==id); saveSongs();
+    document.getElementById('modal').style.display='none';
+    goBack(); toast('Song deleted');
+  }
+
+  function shareSong(id) {
+    const s=S.songs.find(x=>x.id===id); if(!s) return;
+    let text=`🎵 ${s.title}\n\nLanguage: ${s.language}\nDate: ${fmtDate(s.recordingDate)}\n\n`;
+    if(s.tags?.length) text+=`Tags: ${s.tags.map(t=>'#'+t).join(' ')}\n\n`;
+    if(s.notes)        text+=`Notes:\n${s.notes}\n\n`;
+    text+=`Lyrics:\n${s.lyrics}`;
+    if(s.translation)  text+=`\n\nEnglish Translation:\n${s.translation}`;
+    if(navigator.share){
+      navigator.share({title:s.title,text}).catch(()=>{});
+    } else {
+      navigator.clipboard?.writeText(text)
+        .then(()=>toast('Copied to clipboard'))
+        .catch(()=>toast('Share not available — copy the URL manually'));
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  function init() {
+    loadStorage();
+    if('serviceWorker' in navigator)
+      navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker registration failed:', err));
+    render();
+  }
+
+  init();
+  </script>
+</body>
+</html>
