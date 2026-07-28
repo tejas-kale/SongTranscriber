@@ -1,4 +1,4 @@
-const CACHE_NAME = 'song-transcriber-v1';
+const CACHE_NAME = 'song-transcriber-v2';
 const ASSETS = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', e => {
@@ -18,10 +18,10 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Pass through all Gemini API requests without caching
+  // Pass through OpenRouter API requests without caching
   try {
     const url = new URL(e.request.url);
-    if (url.hostname === 'generativelanguage.googleapis.com') return;
+    if (url.hostname === 'openrouter.ai') return;
   } catch (_) { /* ignore non-parseable URLs */ }
   if (e.request.method !== 'GET') { e.respondWith(fetch(e.request)); return; }
 

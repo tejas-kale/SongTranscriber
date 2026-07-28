@@ -418,8 +418,8 @@
     'English','Spanish','French','German','Italian',
     'Portuguese','Japanese','Korean','Chinese','Hindi','Arabic'
   ];
-  const GEMINI_UPLOAD = 'https://generativelanguage.googleapis.com/upload/v1beta/files';
-  const GEMINI_GEN    = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  const OPENROUTER_API = 'https://openrouter.ai/api/v1/chat/completions';
+  const OPENROUTER_MODEL = 'google/gemini-3.5-flash';
 
   // ── State ─────────────────────────────────────────────────────────────────
   const S = {
@@ -459,7 +459,7 @@
   // ── Storage ───────────────────────────────────────────────────────────────
   function loadStorage() {
     S.songs  = JSON.parse(localStorage.getItem('songs')           || '[]');
-    S.apiKey = localStorage.getItem('geminiAPIKey')               || '';
+    S.apiKey = localStorage.getItem('openrouterAPIKey')           || '';
     S.defLang= localStorage.getItem('defaultLanguage')            || 'English';
   }
   function saveSongs() { localStorage.setItem('songs', JSON.stringify(S.songs)); }
@@ -607,7 +607,7 @@
       status=`<div class="rec-status">
         <div class="spinner"></div>
         <div class="rec-title">Transcribing…</div>
-        <div class="rec-subtitle">Uploading to Gemini AI</div>
+        <div class="rec-subtitle">Sending to OpenRouter</div>
       </div>`;
 
     } else if (rs==='transcribed') {
@@ -795,7 +795,7 @@
     const masked = S.apiKey ? '••••••'+S.apiKey.slice(-4) : '';
     return `<div class="settings-view">
       <div class="settings-group">
-        <div class="settings-hdr">Gemini API Key</div>
+        <div class="settings-hdr">OpenRouter API Key</div>
         <div class="settings-card">
           <div class="settings-row">
             <span class="settings-label">API Key</span>
@@ -803,7 +803,7 @@
               ? `<input class="settings-input" id="api-key-inp" type="text"
                    value="${esc(S.apiKey)}" placeholder="Paste your key…"
                    autocorrect="off" autocapitalize="none" spellcheck="false"
-                   oninput="S.apiKey=this.value;localStorage.setItem('geminiAPIKey',this.value)">`
+                   oninput="S.apiKey=this.value;localStorage.setItem('openrouterAPIKey',this.value)">`
               : `<span class="settings-value">${S.apiKey?esc(masked):'Not set'}</span>`}
           </div>
           <div class="settings-row">
@@ -813,7 +813,7 @@
           </div>
         </div>
         <div class="settings-footer">
-          Get your free key from <a href="https://aistudio.google.com" target="_blank">Google AI Studio</a>
+          Get your key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a>
         </div>
       </div>
       <div class="settings-group">
@@ -924,7 +924,7 @@
 
   async function doTranscribe() {
     if(!S.apiKey){
-      S.errMsg='Gemini API key not set. Please add your key in Settings.';
+      S.errMsg='OpenRouter API key not set. Please add your key in Settings.';
       S.recState='error'; render(); return;
     }
     if(!S.recBlob){
@@ -933,8 +933,7 @@
     }
     S.recState='transcribing'; render();
     try {
-      const uri=await uploadAudio(S.recBlob,S.apiKey,S.recMime||'audio/mp4');
-      const res=await genTranscription(uri,S.defLang,S.apiKey,S.recMime||'audio/mp4');
+      const res=await genTranscription(S.recBlob,S.defLang,S.apiKey,S.recMime||'audio/mp4');
       const song={
         id:uid(), title:res.title||'Untitled Song',
         lyrics:res.lyrics||'', translation:res.englishTranslation||null,
@@ -956,32 +955,24 @@
     S.recSecs=0; S.playing=false; S.errMsg=''; S.doneId=null; render();
   }
 
-  // ── Gemini API ────────────────────────────────────────────────────────────
+  // ── OpenRouter API ────────────────────────────────────────────────────────
   function apiErrorMsg(status, serverMsg) {
     if (status===400) return serverMsg || 'Bad request — check that the audio file is valid.';
-    if (status===401||status===403) return 'Invalid API key. Please check your key in Settings.';
-    if (status===429) return 'API rate limit exceeded. Please wait a moment and try again.';
-    if (status>=500) return 'Gemini API is temporarily unavailable. Please try again later.';
+    if (status===401||status===403) return 'Invalid OpenRouter API key. Please check your key in Settings.';
+    if (status===429) return 'OpenRouter API rate limit exceeded. Please wait a moment and try again.';
+    if (status>=500) return 'OpenRouter is temporarily unavailable. Please try again later.';
     return serverMsg || `Request failed (HTTP ${status})`;
   }
 
-  async function uploadAudio(blob, key, mime) {
+  async function genTranscription(blob, lang, key, mime) {
     const base=mime.split(';')[0];
-    const meta=JSON.stringify({file:{display_name:'audio_recording'}});
-    const form=new FormData();
-    form.append('metadata',new Blob([meta],{type:'application/json'}));
-    form.append('data',new Blob([blob],{type:base}),'audio_recording');
-
-    const r=await fetch(`${GEMINI_UPLOAD}?uploadType=multipart&key=${encodeURIComponent(key)}`,
-      {method:'POST',body:form});
-    if(!r.ok){const e=await r.json().catch(()=>({})); throw new Error(apiErrorMsg(r.status, e.error?.message));}
-    const d=await r.json();
-    if(!d.file?.uri) throw new Error('No file URI in upload response');
-    return d.file.uri;
-  }
-
-  async function genTranscription(fileUri, lang, key, mime) {
-    const base=mime.split(';')[0];
+    const format=base.split('/')[1];
+    const audio=await new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(String(reader.result).split(',')[1]);
+      reader.onerror=()=>reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
     const prompt=`Transcribe this song recording in ${lang}. Return the result as a JSON object with the following structure:
 {
   "title": "The song title or 'Untitled Song' if unclear",
@@ -992,14 +983,17 @@ Format the lyrics with one sentence per line.
 Only return the JSON, no additional text.`;
 
     const body={
-      contents:[{parts:[{text:prompt},{fileData:{mimeType:base,fileUri}}]}],
-      generationConfig:{temperature:0.4,topK:32,topP:1,maxOutputTokens:8192}
+      model:OPENROUTER_MODEL,
+      messages:[{role:'user',content:[{type:'text',text:prompt},{type:'input_audio',input_audio:{data:audio,format}}]}],
+      temperature:0.4,
+      max_tokens:8192,
+      response_format:{type:'json_object'}
     };
-    const r=await fetch(`${GEMINI_GEN}?key=${encodeURIComponent(key)}`,
-      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch(OPENROUTER_API,
+      {method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify(body)});
     if(!r.ok){const e=await r.json().catch(()=>({})); throw new Error(apiErrorMsg(r.status, e.error?.message));}
     const d=await r.json();
-    const text=d.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text=d.choices?.[0]?.message?.content;
     if(!text) throw new Error('No transcription text in API response');
     return parseJSON(text);
   }
